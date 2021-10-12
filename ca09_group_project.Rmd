@@ -64,6 +64,11 @@ listings <- vroom("http://data.insideairbnb.com/belgium/bru/brussels/2021-09-24/
 
 ```
 
+```{r}
+# try git pull and git push
+skim(listings)
+```
+
 
 Even though there are many variables in the dataframe, here is a quick description of some of the variables collected, and you can find a [data dictionary here](https://docs.google.com/spreadsheets/d/1iWCNJcSutYqpULSQHlNyGInUvHg2BoUGoNRIGa6Szc4/edit#gid=982310896)
 
