@@ -95,24 +95,10 @@ In the [R4DS Exploratory Data Analysis chapter](http://r4ds.had.co.nz/explorator
 
 Conduct a thorough EDA. Recall that an EDA involves three things:
 
-* Looking at the raw values.
-    * `dplyr::glimpse()`
-* Computing summary statistics of the variables of interest, or finding NAs
-    * `mosaic::favstats()`
-    * `skimr::skim()`
-* Creating informative visualizations.
-    * `ggplot2::ggplot()`
-        * `geom_histogram()` or `geom_density()` for numeric continuous variables
-        * `geom_bar()` or `geom_col()` for categorical variables
-    * `GGally::ggpairs()` for scaterrlot/correlation matrix
-        * Note that you can add transparency to points/density plots in the `aes` call, for example: `aes(colour = gender, alpha = 0.4)`
+
         
 You may wish to have a level 1 header (`#`) for your EDA, then use level 2 sub-headers (`##`) to make sure you cover all three EDA bases. **At a minimum** you should address these questions:
 
-- How many variables/columns? How many rows/observations?
-- Which variables are numbers?
-- Which are categorical or *factor* variables (numeric or character variables with variables that have a fixed and known set of possible values?
-- What are the correlations between variables? Does each scatterplot support a linear relationship between variables? Do any of the correlations appear to be conditional on the value of a categorical variable?
 
 At this stage, you may also find you want to use `filter`, `mutate`, `arrange`, `select`, or `count`. Let your questions lead you! 
 
@@ -121,6 +107,15 @@ At this stage, you may also find you want to use `filter`, `mutate`, `arrange`, 
 ## Data wrangling
 
 Once you load the data, it's always a good idea to use `glimpse` to see what kind of variables you have and what data type (`chr`, `num`, `logical`, `date`, etc) they are. 
+
+ Step 1: Looking at the raw values.
+    * `dplyr::glimpse()`
+    
+Questions to be Answered here: 
+
+- How many variables/columns? How many rows/observations?
+- Which variables are numbers?
+- Which are categorical or *factor* variables (numeric or character variables with variables that have a fixed and known set of possible values?
 
 Notice that some of the price data (`price`) is given as a character string, e.g., "$176.00"
 
@@ -133,6 +128,10 @@ listings <- listings %>%
   
 Use `typeof(listing$price)` to confirm that `price` is now stored as a number.
 
+
+ Step 2: Computing summary statistics of the variables of interest, or finding NAs
+    * `skimr::skim()`
+    * `mosaic::favstats()
 
 ## Propery types
 
@@ -185,6 +184,26 @@ leaflet(data = filter(listings, minimum_nights <= 4)) %>%
                    popup = ~listing_url,
                    label = ~property_type)
 ```
+
+Step 3: * Creating informative visualizations.
+        * `ggplot2::ggplot()`
+        * `geom_histogram()` or `geom_density()` for numeric continuous variables
+        * `geom_bar()` or `geom_col()` for categorical variables
+        * `GGally::ggpairs()` for scaterrlot/correlation matrix
+        * Note that you can add transparency to points/density plots in the `aes` call, for example: `aes(colour = gender, alpha = 0.4)`
+
+
+> What are the correlations between variables? Does each scatterplot support a linear relationship between variables? Do any of the correlations appear to be conditional on the value of a categorical variable?
+
+        Questions we need to answer here: 
+        1. Vertical Bar: Which type of Houses are most common in Brussels? (In terms of Number of Rooms)
+        2. Histogram: What is the AirBnB Price distribution in Brussels 
+        3. Scatterplot: Host Reponse Rate vs Host Total Listings
+        4. Scatterplot: How is the price of the listing related to how long a host has been a host for? 
+        5. - How is Host quality correlated with Price? (Host Quality = Host Response Rate, Host verification, Host Picture, Host Acceptance Rate) 
+                - VIF test to check col linearity between variables 
+           - What is the relationship between price and the host being a Super Host (Logit/Probit Model)
+           - What is the relationship between the minimum number of nights you can book a listing and the listings price? 
 
     
 # Regression Analysis
