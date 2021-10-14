@@ -42,8 +42,6 @@ library(vroom)
 ```
 
 
-
-
 In your final group assignment you have to analyse data about Airbnb listings and fit a model to predict the total cost for two people staying 4 nights in an AirBnB in a city. You can download AirBnB data from [insideairbnb.com](http://insideairbnb.com/get-the-data.html){target="_blank"}; it was originally scraped from airbnb.com. 
 
 The following [Google sheet](https://docs.google.com/spreadsheets/d/1QrR-0PUGVWvDiVQL4LOk7w-xXwiDnM3dDtW6k15Hc7s/edit?usp=sharing) shows which cities you can use; please choose one of them and add your group name next to it, e.g., A7, B13. No city can have more than 2 groups per stream working on it; if this happens, I will allocate study groups to cities with the help of R's sampling.
@@ -62,11 +60,6 @@ All of the listings are a GZ file, namely they are archive files compressed by t
 listings <- vroom("http://data.insideairbnb.com/belgium/bru/brussels/2021-09-24/data/listings.csv.gz") %>% 
        clean_names()
 
-```
-
-```{r}
-# try git pull and git push
-skim(listings)
 ```
 
 
@@ -106,55 +99,82 @@ At this stage, you may also find you want to use `filter`, `mutate`, `arrange`, 
 
 ## Data wrangling
 
-Once you load the data, it's always a good idea to use `glimpse` to see what kind of variables you have and what data type (`chr`, `num`, `logical`, `date`, etc) they are. 
 
- Step 1: Looking at the raw values.
-    * `dplyr::glimpse()`
-    
+```{r}
+glimpse(listings)
+skim(listings)
+```
+
 Questions to be Answered here: 
 
 - How many variables/columns? How many rows/observations?
 - Which variables are numbers?
 - Which are categorical or *factor* variables (numeric or character variables with variables that have a fixed and known set of possible values?
 
-Notice that some of the price data (`price`) is given as a character string, e.g., "$176.00"
+> 
+1. There are 74 variables and 5442 rows
+2. There are 37 numeric variables. They are id, scrape_id, host_id, host_listings_count, host_total_listings_count, latitude, longitude, accommodates, bedrooms, beds, minimum_nights, maximum_nights,  minimum_minimum_nights, maximum_minimum_nights, minimum_maximum_nights, maximum_maximum_nights, minimum_nights_avg_ntm, maximum_nights_avg_ntm, availability_30, availability_60, availability_90, availability_365, number_of_reviews, number_of_reviews_ltm, number_of_reviews_130d, review_scores_rating, review_scores_accuracy, review_scores_cleanliness, review_scores_checkin, review_scores_communication, review_scores_location, review_scores_value, calculated_host_listings_count, calculated_host_listings_count_entire_homes, calculated_host_listings_count_private_rooms, calculated_host_listings_count_shared_rooms, reviews_per_month
+3. Categorical vriables:  host_verifications, host_has_profile_pic, host_identity_verified, neighbourhood, neighbourhood_cleansed, property_type , room_type, has_availability, instant_bookable
+  
 
-Since `price` is a quantitative variable, we need to make sure it is stored as numeric data `num` in the dataframe. To do so, we will first use `readr::parse_number()` which drops any non-numeric characters before or after the first number
 
-```
+```{r}
 listings <- listings %>% 
-  mutate(price = parse_number(price))
+  mutate(price = parse_number(price),
+         bathrooms = parse_number(bathrooms_text))
+typeof(listings$price)
+typeof(listings$bathrooms)
 ```
   
-Use `typeof(listing$price)` to confirm that `price` is now stored as a number.
-
-
  Step 2: Computing summary statistics of the variables of interest, or finding NAs
-    * `skimr::skim()`
-    * `mosaic::favstats()
+
+```{r}
+#Variables of interests
+new_listings <- listings %>% 
+  select(host_since, host_location, host_response_time, host_response_rate, host_is_superhost, host_neighbourhood, host_listings_count, host_total_listings_count, host_has_profile_pic, host_identity_verified, neighbourhood_cleansed, latitude, longitude, property_type, room_type, accommodates, bathrooms, bedrooms, beds, price, minimum_nights, maximum_nights, minimum_nights_avg_ntm, maximum_nights_avg_ntm, has_availability)
+
+skim(new_listings)
+favstats(new_listings[,c(1:25)])
+```
+
+
+> Based on the results of skim, there are 229 missing values in description, 2230 missing in neighborhood_overview, 2 missing in host_name, 16 missing in host_location, 2656 missing in host_about, 2 missing in host_response time, host_response_rate, host_acceptance_rate, host_thumbnail_rul, host_picture_url, 2028 missing in host_neighbourhood, 2230 missing in neighbourhood, 12 missing in bathrooms_text, 2 missing in host_since, 914 missing in first_review and last_review, 2 missing in host_is_superhost, host_has_profile_pic, host_identity_verified, 5442 missing in neighbourhood_group_cleansed, bathrooms, calendar_updated and license.
+
 
 ## Propery types
 
-
 Next, we look at the variable `property_type`. We can use the `count` function to determine how many categories there are their frequency. What are the top 4 most common property types? What proportion of the total listings do they make up? 
 
-Since the vast majority of the observations in the data are one of the top four or five property types, we would like to create a simplified version of `property_type` variable that has 5 categories: the top four categories and `Other`. Fill in the code below to create `prop_type_simplified`.
+````{r}
+new_listings %>% 
+  count(property_type) %>% 
+  arrange(desc(`n`)) %>% 
+  pivot_wider(names_from = property_type, values_from = n) %>% 
+  mutate(total = rowSums(.)) %>% 
+  pivot_longer(col = 1:45, names_to = 'property_type', values_to = 'count' ) %>% 
+  mutate(proportion = count / total)
 
 ```
-listings <- listings %>%
-  mutate(prop_type_simplified = case_when(
-    property_type %in% c("______","______", "______","______") ~ property_type, 
+> The top 4 property type are 'Entire rental unit', 'Private room in rental unit', 'Entire condominium (condo)', and 'Private room in residential home', their proportions are 52.7%, 13.2%, 5.48%, 5.20%.
+
+```{r}
+new_listings <- new_listings %>%
+  
+ mutate(prop_type_simplified = case_when(
+    property_type %in% c("Entire rental unit","Private room in rental unit", "Entire condominium (condo)","Private room in residential home") ~ property_type, 
     TRUE ~ "Other"
   ))
-  
-```
-Use the code below to check that `prop_type_simplified` was correctly made.
 
 ```
-listings %>%
+
+Use the code below to check that `prop_type_simplified` was correctly made.
+
+```{r}
+new_listings %>%
   count(property_type, prop_type_simplified) %>%
   arrange(desc(n))        
-```        
+```              
+    
 
 Airbnb is most commonly used for travel purposes, i.e., as an alternative to traditional hotels. We only want to include  listings in our regression analysis that are intended for travel purposes:
 
@@ -162,8 +182,26 @@ Airbnb is most commonly used for travel purposes, i.e., as an alternative to tra
 - Is ther any value among the common values that stands out? 
 - What is the likely intended purpose for Airbnb listings with this seemingly unusual value for `minimum_nights`?
 
+```{r}
+new_listings %>% 
+  mutate(minimum_nights = as.factor(minimum_nights)) %>% 
+  group_by(minimum_nights) %>% 
+  count() %>% 
+  arrange(desc(n))
+```
+
+>
+1. The most common value is 1 day. 
+2. 90, 30 days stand out among those common values
+3. the unusual values are either 1 month or 1 quater, which indicates that house hosts have high intention to let their house for long-term purpose (1 month or 1 quater)
+
+
 Filter the airbnb data so that it only includes observations with `minimum_nights <= 4`
 
+```{r}
+new_listings <- new_listings %>% 
+  filter(minimum_nights <= 4)
+```
         
 # Mapping 
 
