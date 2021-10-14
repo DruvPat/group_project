@@ -64,6 +64,11 @@ listings <- vroom("http://data.insideairbnb.com/belgium/bru/brussels/2021-09-24/
 
 ```
 
+```{r}
+# try git pull and git push
+skim(listings)
+```
+
 
 Even though there are many variables in the dataframe, here is a quick description of some of the variables collected, and you can find a [data dictionary here](https://docs.google.com/spreadsheets/d/1iWCNJcSutYqpULSQHlNyGInUvHg2BoUGoNRIGa6Szc4/edit#gid=982310896)
 
@@ -101,83 +106,52 @@ At this stage, you may also find you want to use `filter`, `mutate`, `arrange`, 
 
 ## Data wrangling
 
-```{r}
-glimpse(listings)
-skim(listings)
-```
+Once you load the data, it's always a good idea to use `glimpse` to see what kind of variables you have and what data type (`chr`, `num`, `logical`, `date`, etc) they are. 
 
+ Step 1: Looking at the raw values.
+    * `dplyr::glimpse()`
+    
 Questions to be Answered here: 
 
 - How many variables/columns? How many rows/observations?
 - Which variables are numbers?
 - Which are categorical or *factor* variables (numeric or character variables with variables that have a fixed and known set of possible values?
 
-> 
-1. There are 74 variables and 5442 rows
-2. There are 37 numeric variables. They are id, scrape_id, host_id, host_listings_count, host_total_listings_count, latitude, longitude, accommodates, bedrooms, beds, minimum_nights, maximum_nights,  minimum_minimum_nights, maximum_minimum_nights, minimum_maximum_nights, maximum_maximum_nights, minimum_nights_avg_ntm, maximum_nights_avg_ntm, availability_30, availability_60, availability_90, availability_365, number_of_reviews, number_of_reviews_ltm, number_of_reviews_130d, review_scores_rating, review_scores_accuracy, review_scores_cleanliness, review_scores_checkin, review_scores_communication, review_scores_location, review_scores_value, calculated_host_listings_count, calculated_host_listings_count_entire_homes, calculated_host_listings_count_private_rooms, calculated_host_listings_count_shared_rooms, reviews_per_month
-3. Categorical vriables:  host_verifications, host_has_profile_pic, host_identity_verified, neighbourhood, neighbourhood_cleansed, property_type , room_type, has_availability, instant_bookable
-    
+Notice that some of the price data (`price`) is given as a character string, e.g., "$176.00"
 
+Since `price` is a quantitative variable, we need to make sure it is stored as numeric data `num` in the dataframe. To do so, we will first use `readr::parse_number()` which drops any non-numeric characters before or after the first number
 
-```{r}
-listings <- listings %>% 
-  mutate(price = parse_number(price),
-         bathrooms = parse_number(bathrooms_text))
-typeof(listings$price)
-typeof(listings$bathrooms)
 ```
+listings <- listings %>% 
+  mutate(price = parse_number(price))
+```
+  
+Use `typeof(listing$price)` to confirm that `price` is now stored as a number.
+
 
  Step 2: Computing summary statistics of the variables of interest, or finding NAs
-
-```{r}
-#Variables of interests
-new_listings <- listings %>% 
-  select(host_since, host_location, host_response_time, host_response_rate, host_is_superhost, host_neighbourhood, host_listings_count, host_total_listings_count, host_has_profile_pic, host_identity_verified, neighbourhood_cleansed, latitude, longitude, property_type, room_type, accommodates, bathrooms, bedrooms, beds, price, minimum_nights, maximum_nights, minimum_nights_avg_ntm, maximum_nights_avg_ntm, has_availability)
-
-skim(new_listings)
-favstats(new_listings[,c(1:25)])
-
-```
-
-> Based on the results of skim, there are 229 missing values in description, 2230 missing in neighborhood_overview, 2 missing in host_name, 16 missing in host_location, 2656 missing in host_about, 2 missing in host_response time, host_response_rate, host_acceptance_rate, host_thumbnail_rul, host_picture_url, 2028 missing in host_neighbourhood, 2230 missing in neighbourhood, 12 missing in bathrooms_text, 2 missing in host_since, 914 missing in first_review and last_review, 2 missing in host_is_superhost, host_has_profile_pic, host_identity_verified, 5442 missing in neighbourhood_group_cleansed, bathrooms, calendar_updated and license.
+    * `skimr::skim()`
+    * `mosaic::favstats()
 
 ## Propery types
 
 
 Next, we look at the variable `property_type`. We can use the `count` function to determine how many categories there are their frequency. What are the top 4 most common property types? What proportion of the total listings do they make up? 
 
-```{r}
-new_listings %>% 
-  count(property_type) %>% 
-  arrange(desc(`n`)) %>% 
-  pivot_wider(names_from = property_type, values_from = n) %>% 
-  mutate(total = rowSums(.)) %>% 
-  pivot_longer(col = 1:45, names_to = 'property_type', values_to = 'count' ) %>% 
-  mutate(proportion = count / total)
-
-
-
-```
-
-> The top 4 property type are 'Entire rental unit', 'Private room in rental unit', 'Entire condominium (condo)', and 'Private room in residential home', their proportions are 52.7%, 13.2%, 5.48%, 5.20%.
-
 Since the vast majority of the observations in the data are one of the top four or five property types, we would like to create a simplified version of `property_type` variable that has 5 categories: the top four categories and `Other`. Fill in the code below to create `prop_type_simplified`.
 
-```{r}
-new_listings <- new_listings %>%
+```
+listings <- listings %>%
   mutate(prop_type_simplified = case_when(
-    property_type %in% c("Entire rental unit","Private room in rental unit", "Entire condominium (condo)","Private room in residential home") ~ property_type, 
+    property_type %in% c("______","______", "______","______") ~ property_type, 
     TRUE ~ "Other"
   ))
   
-
 ```
-
-
 Use the code below to check that `prop_type_simplified` was correctly made.
 
-```{r}
-new_listings %>%
+```
+listings %>%
   count(property_type, prop_type_simplified) %>%
   arrange(desc(n))        
 ```        
@@ -188,24 +162,7 @@ Airbnb is most commonly used for travel purposes, i.e., as an alternative to tra
 - Is ther any value among the common values that stands out? 
 - What is the likely intended purpose for Airbnb listings with this seemingly unusual value for `minimum_nights`?
 
-```{r}
-new_listings %>% 
-  mutate(minimum_nights = as.factor(minimum_nights)) %>% 
-  group_by(minimum_nights) %>% 
-  count() %>% 
-  arrange(desc(n))
-```
-
->
-1. The most common value is 1 day. 
-2. 90, 30 days stand out among those common values
-3. the unusual values are either 1 month or 1 quater, which indicates that house hosts have high intention to let their house for long-term purpose (1 month or 1 quater)
-
 Filter the airbnb data so that it only includes observations with `minimum_nights <= 4`
-```{r}
-new_listings <- new_listings %>% 
-  filter(minimum_nights <= 4)
-```
 
         
 # Mapping 
@@ -276,6 +233,15 @@ Our dataset has many more variables, so here are some ideas on how you can exten
 1. For all cities, there are 3 variables that relate to neighbourhoods: `neighbourhood`, `neighbourhood_cleansed`, and `neighbourhood_group_cleansed`. There are typically more than 20 neighbourhoods in each city, and it wouldn't make sense to include them all in your model. Use your city knowledge, or ask someone with city knowledge, and see whether you can group neighbourhoods together so the majority of listings falls in fewer (5-6 max) geographical areas. You would thus need to create a new categorical variabale `neighbourhood_simplified` and determine whether location is a predictor of `price_4_nights`
 1. What is the effect of `avalability_30` or `reviews_per_month` on `price_4_nights`, after we control for other variables?
 
+Model 3: price_4_nights vs. prop_type_simplified`, `number_of_reviews`, `review_scores_rating`, 'bathrooms', 'bedrooms', and beds' (Do VIF Test)
+
+Model 4: price_4_nights vs. prop_type_simplified`, `number_of_reviews`, `review_scores_rating`, 'bathrooms', 'bedrooms', 'beds', and 'superhosts' (Do VIF Test)
+
+Model 5: price_4_nights vs. prop_type_simplified`, `number_of_reviews`, `review_scores_rating`, 'bathrooms', 'bedrooms', 'beds', 'superhosts', instant_bookable (Do VIF Test)
+
+Model 6: price_4_nights vs. prop_type_simplified`, `number_of_reviews`, `review_scores_rating`, 'bathrooms', 'bedrooms', 'beds', 'superhosts', 'neighbourhood_simplified'(Do VIF Test)
+
+Model 7: Model 6: price_4_nights vs. prop_type_simplified`, `number_of_reviews`, `review_scores_rating`, 'bathrooms', 'bedrooms', 'beds', 'superhosts', 'neighbourhood_simplified', reviews_per_month (Do VIF Test)
 
 ## Diagnostics, collinearity, summary tables
 
@@ -290,6 +256,10 @@ As you keep building your models, it makes sense to:
 1. Finally, you must use the best model you came up with for prediction. Suppose you are planning to visit the city you have been assigned to over reading week, and you want to stay in an Airbnb. Find Airbnb's in your destination city that are apartments with a private room, have at least 10 reviews, and an average rating of at least 90. Use your best model to predict the total cost to stay at this Airbnb for 4 nights. Include the appropriate 95% interval with your prediction. Report the point prediction and interval in terms of `price_4_nights`. 
   - if you used a log(price_4_nights) model, make sure you anti-log to convert the value in $. You can read more about [hot to interpret a regression model when some variables are log transformed here](https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqhow-do-i-interpret-a-regression-model-when-some-variables-are-log-transformed/)
 
+
+- Summary Table construction with all 7 models 
+
+- Simulation Test with 95% CI
 
 # Deliverables
 
