@@ -87,9 +87,8 @@ For model 7, we try to find the effect of the variable `avalability_30` or `revi
 
 >**Choosing a model**   
 Model 7 has the highest adjusted R^2, and also the lowest RMSE in testing set, which means model7 has the best explaining ability with no overfitting. So we use model7 for prediction.\
-Prediction.    
-Suppose I want to order a private room in rental unit, with one bathroom and 1 bedroom. The size of the room could accommodate 2 people. Also, I want this room to be instant bookable, and its location should be in the North West. Reviews per month should be 1.6, and average rating should be 4.5 and availability in 30 days should be about 15.
-Based on Model 7, the expected price I should pay for 4 nights is 155.0 Euros, and 95% upper price is 336.2 Euros, and 95% lower price 71.5 Euros. 
+**Prediction**  
+Suppose I want to order a private room in rental unit, located in North West. We want this room to have more than 10 reviews with an average score rating higher than 4.5. Based on the existing dataset, our point estimation for the price I should pay for 4 nights is 123.4 Euros, and 95% upper price is 131.6 Euros, 95% lower price is 115.7 Euros.
 
 
 # Exploratory Data Analysis (EDA)
@@ -100,7 +99,10 @@ Based on Model 7, the expected price I should pay for 4 nights is 155.0 Euros, a
 
 ```{r, data_lookey}
 glimpse(listings)
-skim(listings)
+skim(listings, where(is.numeric))
+skim(listings, where(is.factor))
+skim(listings, where(is.Date))
+skim(listings, where(is.logical))
 ```
 
 ### Step 1: Glimpse and Skim Results 
@@ -111,56 +113,56 @@ skim(listings)
 
 #### Which variables are numbers?
 
-> There are 37 numeric variables. They are: 
-- id
-- scrape_id
-- host_id
-- host_listings_count
-- host_total_listings_count
-- latitude
-- longitude
-- accommodates
-- bedrooms
-- beds
-- minimum_nights
-- maximum_nights
-- minimum_minimum_nights
-- maximum_minimum_nights
-- minimum_maximum_nights
-- maximum_maximum_nights
-- minimum_nights_avg_ntm
-- maximum_nights_avg_ntm
-- availability_30
-- availability_60
-- availability_90
-- availability_365
-- number_of_reviews
-- number_of_reviews_ltm
-- number_of_reviews_130d
-- review_scores_rating
-- review_scores_accuracy
-- review_scores_cleanliness
-- review_scores_checkin
-- review_scores_communication
-- review_scores_location
-- review_scores_value
-- calculated_host_listings_count
-- calculated_host_listings_count_entire_homes
-- calculated_host_listings_count_private_rooms
-- calculated_host_listings_count_shared_rooms
+> ***There are 37 numeric variables. They are:***  
+- id  
+- scrape_id  
+- host_id  
+- host_listings_count  
+- host_total_listings_count  
+- latitude  
+- longitude  
+- accommodates  
+- bedrooms  
+- beds  
+- minimum_nights  
+- maximum_nights  
+- minimum_minimum_nights  
+- maximum_minimum_nights  
+- minimum_maximum_nights  
+- maximum_maximum_nights  
+- minimum_nights_avg_ntm  
+- maximum_nights_avg_ntm  
+- availability_30  
+- availability_60  
+- availability_90  
+- availability_365  
+- number_of_reviews  
+- number_of_reviews_ltm  
+- number_of_reviews_130d   
+- review_scores_rating   
+- review_scores_accuracy  
+- review_scores_cleanliness  
+- review_scores_checkin  
+- review_scores_communication  
+- review_scores_location  
+- review_scores_value  
+- calculated_host_listings_count  
+- calculated_host_listings_count_entire_homes  
+- calculated_host_listings_count_private_rooms  
+- calculated_host_listings_count_shared_rooms  
 - reviews_per_month
 
 #### Which are categorical or *factor* variables (numeric or character variables with variables that have a fixed and known set of possible values?
 
-> Categorical vriables: 
-- host_verifications
-- host_has_profile_pic
-- host_identity_verified
-- neighbourhood
-- neighbourhood_cleansed
-- property_type 
-- room_type
-- has_availability
+> ***Categorical vriables:***   
+- host_verifications  
+- host_has_profile_pic  
+- host_identity_verified  
+- neighbourhood  
+- neighbourhood_cleansed  
+- property_type   
+- room_type  
+- has_availability  
 - instant_bookable
   
 
@@ -175,11 +177,22 @@ typeof(listings$bathrooms)
 ### Step 2: Computing summary statistics of the variables of interest, or finding NAs
 
 ```{r variables_of_interest_new_listings}
+# select some important varialbes to calculate summary statistics
+important_var <- c('host_listings_count', 'host_total_listings_count', 'accommodates', 'bathrooms','bedrooms', 'beds', 'price', 'minimum_nights', 'maximum_nights', 'minimum_minimum_nights', 'maximum_minimum_nights', 'minimum_maximum_nights', 'minimum_nights_avg_ntm', 'maximum_nights_avg_ntm', 'availability_30', 'availability_60', 'availability_90', 'availability_365', 'number_of_reviews', 'number_of_reviews_ltm', 'number_of_reviews_l30d', 'review_scores_rating', 'review_scores_accuracy')
+
+listings[, c(important_var)] %>% 
+  pivot_longer(cols = c(1:23), names_to = 'variable', values_to = 'value' ) %>% 
+  group_by(variable) %>% 
+  summarise(favstats(value))
+
 #Variables of interests
 new_listings <- listings %>% 
   select(host_since, host_location, host_response_time, host_response_rate, host_is_superhost, host_neighbourhood, host_listings_count, host_total_listings_count, host_has_profile_pic, host_identity_verified, neighbourhood_cleansed, latitude, longitude, property_type, room_type, accommodates, bathrooms, bedrooms, beds, price, minimum_nights, maximum_nights, minimum_nights_avg_ntm, maximum_nights_avg_ntm, has_availability, number_of_reviews, review_scores_rating, instant_bookable, availability_30,  reviews_per_month)
 
-skim(new_listings)
+skim(new_listings, where(is.numeric))
+skim(new_listings, where(is.factor))
+skim(new_listings, where(is.Date))
+skim(new_listings, where(is.logical))
 
 ```
 
@@ -225,12 +238,6 @@ new_listings %>%
 ```              
     
 
-Airbnb is most commonly used for travel purposes, i.e., as an alternative to traditional hotels. We only want to include  listings in our regression analysis that are intended for travel purposes:
-
-- What are the  most common values for the variable `minimum_nights`? 
-- Is ther any value among the common values that stands out? 
-- What is the likely intended purpose for Airbnb listings with this seemingly unusual value for `minimum_nights`?
-
 ```{r new_listings_cleaning_illus3}
 new_listings %>% 
   mutate(minimum_nights = as.factor(minimum_nights)) %>% 
@@ -272,12 +279,6 @@ leaflet(data = filter(listings, minimum_nights <= 4)) %>%
                    label = ~property_type)
 ```
 
-Step 3: * Creating informative visualizations.
-        * `ggplot2::ggplot()`
-        * `geom_histogram()` or `geom_density()` for numeric continuous variables
-        * `geom_bar()` or `geom_col()` for categorical variables
-        * `GGally::ggpairs()` for scaterrlot/correlation matrix
-        * Note that you can add transparency to points/density plots in the `aes` call, for example: `aes(colour = gender, alpha = 0.4)`
 
 ## Visualizations 
 
@@ -332,10 +333,10 @@ Firstly, we would hypothesize that, to an extent, the higher the number accomoda
 
 ```{r viz_2, fig.width= 12}
 price_by_prop_type_histo <- ggplot(new_listings, aes(x = price))+ 
-  geom_bar(fill = 'violet') +
+  geom_boxplot(outlier.colour = "red", outlier.shape =8, outlier.size =4) +
+  facet_wrap(~room_type)+
   theme_bw()+
   xlim(0,300)+
-  facet_wrap(~ room_type)+
   labs(title = "AirBnB listings in Brussels' price distribution",
          x = "Price", 
          y = "")
@@ -851,29 +852,32 @@ data_frame(RMSE_model1,RMSE_model2,RMSE_model3,RMSE_model4, RMSE_model5,
 
 
 ```{r}
-prop_type_simplified<- c( 'Private room in rental unit')
-number_of_reviews <- c(10)
-room_type <- c('Private room')
-bathrooms <- c(1)
-bedrooms <- c(1)
-accommodates <- c(1)
-instant_bookable <- c(1)
-review_scores_rating <- c(4.5)
-neighbourhood_simplified <- ('North West')
-reviews_per_month <- (1.6) # take the mean value
-availability_30 <- c(15)
+data <- new_listings %>% 
+  filter(review_scores_rating >= 4.5,
+         prop_type_simplified == 'Private room in rental unit',
+         room_type == 'Private room',
+         number_of_reviews >= 10,
+         neighbourhood_simplified == 'North West') 
 
-data_project <- data.frame(prop_type_simplified, number_of_reviews, review_scores_rating, room_type, bathrooms, bedrooms, accommodates, instant_bookable,
-                           neighbourhood_simplified, reviews_per_month, availability_30)
-
-
-data.frame(predict(model7, newdata = data_project, interval = 'prediction')) %>% 
-  mutate(fit = exp(fit),
-         lwr = exp(lwr),
-         upr = exp(upr))
+data %>% 
+  mutate(predictions = predict(model7,.)) %>% 
+  select(predictions) %>% 
+  summarise(mean = mean(predictions, na.rm = TRUE), 
+            std = sd(predictions, na.rm =TRUE),
+            count = n(),
+            SE = std / sqrt(count),
+  # get t-critical value with (n-1) degrees of freedom,
+            t = qt(0.975, count - 1),
+            margin_of_error = t * SE,
+            lower_CI = mean - margin_of_error,
+            higher_CI = mean + margin_of_error) %>% 
+  select(mean, std, lower_CI, higher_CI) %>% 
+  mutate(mean = exp(mean),
+         lower_CI = exp(lower_CI),
+         higher_CI = exp(higher_CI))
 ```
 
 
 ### Our Answer to the prediction 
 
-> Suppose I want to order a private room in rental unit, with one bathroom and 1 bedroom. The size of the room could accomodate 1 person. Also, I want this room to be instant bookable, and its location should be in the North West. Reviews per month should be 1.6, and average rating should be 4.5 and availability in 30 days should be about 15.
+> Suppose I want to order a private room in rental unit, located in North West. We want this room to have more than 10 reviews with an average score rating higher than 4.5. Based on the existing dataset, our point estimation for the price I should pay for 4 nights is 123.4 Euros, and 95% upper price is 131.6 Euros, 95% lower price is 115.7 Euros.
